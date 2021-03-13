@@ -2,23 +2,29 @@ import numpy as np
 
 
 class Epidemic:
+    """Simulate an epidemic in discrete time according to the SIR and SIRV models"""
+
     def __init__(self, model, graph, steps, **kwargs):
-        """Simulate an epidemic in discrete time according to the SIR and SIRV
-        models.
+        """Set the epidemic model, the number of steps of the simulation and
+         create a graph of the specified type on which to simulate the epidemic.
 
         Args:
             model: either 'sir' or 'sirv'
             graph: graph representing individuals (nodes) and connections
                 between these individuals (edges)
-            steps: number of steps, i.e., weeks, of the simulation
-            **kwargs: additional arguments for the epidemic model
+            steps: number of steps, e.g., weeks, of the simulation
+            **kwargs: parameters for the epidemic model
 
         """
 
         self.graph = graph
         self.steps = steps
 
-        self.config = getattr(self, model)(**kwargs)
+        self.model = model
+        self.simulation_args = kwargs
+
+    def simulate(self):
+        return getattr(self, self.model)(**self.simulation_args)
 
     def sir(self, beta, rho, n_infected_init):
         """Simulate an epidemic in discrete time according to a simplified
@@ -189,3 +195,10 @@ class Epidemic:
                     config[t, i] = 3
 
         return config
+
+    @staticmethod
+    def parameter_check(beta, rho, n_infected_init):
+        """Check validity of epidemic parameters. Return True if valid."""
+        if (beta < 0 or beta > 1) or (rho < 0 or rho > 1) or (n_infected_init <= 0):
+            return False
+        return True

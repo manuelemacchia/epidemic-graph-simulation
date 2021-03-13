@@ -15,6 +15,9 @@ def k_regular(n, k):
 
     """
 
+    if not k_regular_check(n, k):
+        raise ValueError("Invalid parameters")
+
     nodes = list(range(n))
     edges = []
 
@@ -38,6 +41,13 @@ def k_regular(n, k):
     return graph
 
 
+def k_regular_check(n, k):
+    if (k > n) or (n <= 0) or (k <= 1):  # n and k must be strictly positive integers
+        return False
+
+    return True
+
+
 def preferential_attachment(n, k):
     """Generate a random graph according to the preferential attachment model.
 
@@ -54,6 +64,9 @@ def preferential_attachment(n, k):
         graph: instance of a preferential attachment graph
 
     """
+
+    if not preferential_attachment_check(n, k):
+        raise ValueError("Invalid parameters")
 
     graph = nx.complete_graph(k+1)
 
@@ -85,6 +98,14 @@ def preferential_attachment(n, k):
         n_t += 1
 
     return graph
+
+
+def preferential_attachment_check(n, k):
+    # n and k must be strictly positive integers
+    if (k > n) or (n <= 0) or (k <= 1):
+        return False
+
+    return True
 
 
 def newman_watts_strogatz(n, k, p):
