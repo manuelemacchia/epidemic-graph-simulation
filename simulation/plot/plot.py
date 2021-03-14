@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def sir_plot(s, i, r, v=[]):
+def sir_plot(s, i, r, v=[], file=None):
     fig, ax = plt.subplots(figsize=(10, 6))
 
     ticks = np.arange(0, s.shape[0], dtype=int)
@@ -19,10 +19,13 @@ def sir_plot(s, i, r, v=[]):
     ax.grid(alpha=0.3)
     ax.legend()
 
-    plt.show()
+    if file:
+        plt.savefig(file)
+    else:
+        plt.show()
 
 
-def ni_plot(ni):
+def ni_plot(ni, file=None):
     fig, ax = plt.subplots(figsize=(10, 6))
 
     ticks = np.arange(0, ni.shape[0], dtype=int)
@@ -34,10 +37,13 @@ def ni_plot(ni):
     ax.set_ylabel('Number of newly infected nodes')
     ax.grid(alpha=0.3)
 
-    plt.show()
+    if file:
+        plt.savefig(file)
+    else:
+        plt.show()
 
 
-def ninv_plot(ni, nv):
+def ninv_plot(ni, nv, file=None):
     fig, ax = plt.subplots(figsize=(10, 6))
 
     ticks = np.arange(0, ni.shape[0], dtype=int)
@@ -51,10 +57,13 @@ def ninv_plot(ni, nv):
     ax.grid(alpha=0.3)
     ax.legend()
 
-    plt.show()
+    if file:
+        plt.savefig(file)
+    else:
+        plt.show()
 
 
-def ni_comparison_plot(ni, ni_target):
+def ni_comparison_plot(ni, ni_target, file=None):
     fig, ax = plt.subplots(figsize=(10, 6))
 
     ticks = np.arange(0, ni.shape[0], dtype=int)
@@ -68,4 +77,7 @@ def ni_comparison_plot(ni, ni_target):
     ax.grid(alpha=0.3)
     ax.legend()
 
-    plt.show()
+    if file:
+        plt.savefig(file)
+    else:
+        plt.show()
