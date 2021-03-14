@@ -3,7 +3,7 @@
 ## Overview
 The goal is to learn the network characteristics and disease dynamics of the pandemic occurred in Sweden during 2009, commonly known as [swine flu](https://en.wikipedia.org/wiki/2009_swine_flu_pandemic). As a secondary goal, we develop an algorithm to simulate an epidemic on a random graph of choice according to the SIR and SIRV models.
 
-→ [Open the notebook](...) to read the analysis.
+→ [Open the notebook](https://nbviewer.jupyter.org/github/manuelemacchia/epidemic-graph-simulation/blob/main/experiments.ipynb) to read the analysis.
 
 ## Requirements
 All required packages are listed in `requirements.txt`. All experiments in the notebook are carried out on Python 3.9.2.
