@@ -49,6 +49,8 @@ class ParameterSearch:
         self.generator_check = graph_generator_check
         self.n_nodes = n_nodes
 
+        self.best_params = None
+
     def search(self,
                graph_initial_params,
                epidemic_initial_params,
@@ -121,39 +123,16 @@ class ParameterSearch:
 
             for i, grid_i in enumerate(grid_params):
                 # Split grid into epidemic parameters and graph parameters
-                graph_grid_i = {**{k: grid_i[k] for k in graph_param_names}, **{"n": self.n_nodes}}
+                graph_grid_i = {**{k: grid_i[k] for k in graph_param_names}, 'n': self.n_nodes}
                 epidemic_grid_i = {k: grid_i[k] for k in epidemic_param_names}
-
-                print(graph_grid_i, epidemic_grid_i)
 
                 # Skip invalid grids
                 if not self.generator_check(**graph_grid_i) \
                         or not Epidemic.parameter_check(n_infected_init=self.n_infected_init, **epidemic_grid_i):
                     continue
 
-                graph = self.generator(**graph_grid_i)
-
-                epidemic = Epidemic('sirv', graph, self.steps,
-                                    n_infected_init=self.n_infected_init, vacc=self.vacc, **epidemic_grid_i)
-
-                # Perform simulations_per_grid in order to find a significant
-                # result for newly infected nodes per week (variability is too
-                # high if we perform a single simulation)
-                ni = np.zeros((simulations_per_grid, self.steps+1))
-
-                for sim_id in range(simulations_per_grid):
-                    sim = epidemic.simulate()
-
-                    ni[sim_id] = np.array(
-                        [self.n_infected_init] +
-                        [((sim[t - 1] == 0) & (sim[t] == 1)).sum() for t in range(1, self.steps+1)],
-                        dtype=int
-                    )
-
-                ni = ni.mean(axis=0)
-
-                # Compute the loss
-                loss[i] = self.rmse(ni, self.ni_target)
+                # Perform a step and compute the loss
+                loss[i] = self.search_step(graph_grid_i, epidemic_grid_i, simulations_per_grid)
 
             prev_params = deepcopy(current_params)
             current_params = grid_params[int(np.argmin(loss))]
@@ -169,6 +148,131 @@ class ParameterSearch:
 
         print(f"Best parameter set {current_params} after {iteration_i} iteration(s)")
         print(f"Time elapsed: {time.time() - start}")
+
+        self.best_params = current_params
+
+    def basic_search(self,
+                     graph_initial_params,
+                     epidemic_initial_params,
+                     graph_delta_params,
+                     epidemic_delta_params,
+                     simulations_per_grid):
+        """Estimate the best parameters for the simulation according to the
+        newly infected individuals target `ni_target`. This is a basic version
+        of the search algorithm upon which `search` is based on.
+
+        Args:
+            graph_initial_params (dict): initial parameters for the graph
+            epidemic_initial_params (dict): initial parameters for the epidemic,
+                namely beta and rho
+            graph_delta_params (dict): deltas for searching the parameter space
+                of the graph
+            epidemic_delta_params (dict): deltas for searching the parameter
+                space of the epidemic model
+            simulations_per_grid (int): number of simulations to run for each
+                parameter set
+
+        """
+
+        graph_param_names = set(graph_initial_params.keys())
+        epidemic_param_names = set(epidemic_initial_params.keys())
+
+        # Merge dicts for constructing parameter space
+        current_params = {**graph_initial_params, **epidemic_initial_params}
+        delta_params = {**graph_delta_params, **epidemic_delta_params}
+
+        iteration_i = 0
+
+        end = False
+
+        start = time.time()
+
+        # Keep descending the gradient until we reach a local optimum,
+        # i.e., the previous set of best parameters is equal to the
+        # current set of best parameters.
+        while not end:
+            iteration_i += 1
+            print(f"Iteration {iteration_i} params={current_params}")
+
+            # Construct the search space with the following format.
+            #  {"a": [current_params["a"]-delta_params["a"], current_params["a"], current_params["a"]+delta_params["a"],
+            #   ...,
+            #   "z": [current_params["z"]-delta_params["z"], current_params["z"], current_params["z"]+delta_params["z"]}
+            search_space_params = {}
+            for k, v in current_params.items():
+                search_space_params[k] = [v - delta_params[k], v, v + delta_params[k]]
+
+            # Generate the a list of parameters, based on the search space, over
+            # which simulations will be run. Our goal is to find the best set of
+            # parameters among these.
+            grid_params = list(ParameterGrid(search_space_params))
+
+            # Initialize the loss array (RMSE)
+            loss = np.full(len(grid_params), np.inf)
+
+            for i, grid_i in enumerate(grid_params):
+                # Split grid into epidemic parameters and graph parameters
+                graph_grid_i = {**{k: grid_i[k] for k in graph_param_names}, 'n': self.n_nodes}
+                epidemic_grid_i = {k: grid_i[k] for k in epidemic_param_names}
+
+                # Skip invalid grids
+                if not self.generator_check(**graph_grid_i) \
+                        or not Epidemic.parameter_check(n_infected_init=self.n_infected_init, **epidemic_grid_i):
+                    continue
+
+                loss[i] = self.search_step(graph_grid_i, epidemic_grid_i, simulations_per_grid)
+
+            prev_params = deepcopy(current_params)
+            current_params = grid_params[int(np.argmin(loss))]
+
+            if self.isclose(current_params, prev_params):
+                end = True
+
+            print(f"Lowest loss {np.min(loss)} for grid set {current_params}")
+
+        print(f"Best parameter set {current_params} after {iteration_i} iteration(s)")
+        print(f"Time elapsed: {time.time() - start}")
+
+        self.best_params = current_params
+
+    def search_step(self, graph_params, epidemic_params, simulations):
+        """Perform a search step consisting in simulating a specific parameter
+        grid for #simulations iterations. Returns the loss function computed
+        against the newly infected target vector.
+
+        Args:
+            graph_params (dict): parameters for the graph
+            epidemic_params (dict): parameters for the epidemic, namely beta
+                and rho
+            simulations:
+
+        Returns:
+            loss: loss function computed on the current grid
+
+        """
+
+        graph = self.generator(**graph_params)
+
+        epidemic = Epidemic('sirv', graph, self.steps,
+                            n_infected_init=self.n_infected_init, vacc=self.vacc, **epidemic_params)
+
+        # Perform simulations_per_grid in order to find a significant
+        # result for newly infected nodes per week (variability is too
+        # high if we perform a single simulation)
+        ni = np.zeros((simulations, self.steps + 1))
+
+        for sim_id in range(simulations):
+            sim = epidemic.simulate()
+
+            ni[sim_id] = np.array(
+                [self.n_infected_init] +
+                [((sim[t - 1] == 0) & (sim[t] == 1)).sum() for t in range(1, self.steps + 1)],
+                dtype=int
+            )
+
+        ni = ni.mean(axis=0)
+
+        return self.rmse(ni, self.ni_target)
 
     @staticmethod
     def rmse(ni, ni_target):
