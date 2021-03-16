@@ -132,7 +132,7 @@ class ParameterSearch:
                     continue
 
                 # Perform a step and compute the loss
-                loss[i] = self.search_step(graph_grid_i, epidemic_grid_i, simulations_per_grid)
+                loss[i] = self.search_step(graph_grid_i, epidemic_grid_i, simulations_per_grid, seed=42)
 
             prev_params = deepcopy(current_params)
             current_params = grid_params[int(np.argmin(loss))]
@@ -235,7 +235,7 @@ class ParameterSearch:
 
         self.best_params = current_params
 
-    def search_step(self, graph_params, epidemic_params, simulations):
+    def search_step(self, graph_params, epidemic_params, simulations, seed=None):
         """Perform a search step consisting in simulating a specific parameter
         grid for #simulations iterations. Returns the loss function computed
         against the newly infected target vector.
@@ -244,14 +244,21 @@ class ParameterSearch:
             graph_params (dict): parameters for the graph
             epidemic_params (dict): parameters for the epidemic, namely beta
                 and rho
-            simulations:
+            simulations (int): number of simulations to run for the current grid
+            seed (int): if not None, graph structure is predictable according to
+                the chosen seed
 
         Returns:
             loss: loss function computed on the current grid
 
         """
 
-        graph = self.generator(**graph_params)
+        if seed is not None:
+            np.random.seed(seed)  # Set the seed (predictable graph for same parameters)
+            graph = self.generator(**graph_params)
+            np.random.seed()  # Release seed
+        else:
+            graph = self.generator(**graph_params)
 
         epidemic = Epidemic('sirv', graph, self.steps,
                             n_infected_init=self.n_infected_init, vacc=self.vacc, **epidemic_params)
