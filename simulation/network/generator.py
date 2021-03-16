@@ -127,3 +127,11 @@ def newman_watts_strogatz(n, k, p):
     """
 
     return nx.newman_watts_strogatz_graph(n, k, p)
+
+
+def newman_watts_strogatz_check(n, k, p):
+    # n and k must be strictly positive integers
+    if (k > n) or (n <= 0) or (k <= 1) or (p < 0 or p > 1):
+        return False
+
+    return True
